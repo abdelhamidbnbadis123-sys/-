@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة ألعاب التحدي والذكاء الجزائرية</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs (v8 compatibility) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        * {
+            font-family: 'Cairo', sans-serif;
+            user-select: none;
+        }
+        body {
+            background-color: #030712;
+            color: #f3f4f6;
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .neon-glow-amber {
+            box-shadow: 0 0 25px rgba(245, 158, 11, 0.2);
+        }
+        .neon-glow-emerald {
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
+        }
+        .btn-neon {
+            transition: all 0.25s ease-in-out;
+        }
+        .btn-neon:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+        }
+        .btn-neon-emerald:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #030712;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f2937;
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-slate-950/90 border-b border-slate-800/80 sticky top-0 z-50 backdrop-blur-md px-4 py-3">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="navigateToHome()">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 via-emerald-500 to-teal-400 flex items-center justify-center font-black text-slate-950 text-xl shadow-lg shadow-amber-500/20">
+                    DZ
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-base md:text-lg leading-tight bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-300 bg-clip-text text-transparent">تحدي الذكاء الجزائر</h1>
+                    <p class="text-[10px] md:text-xs text-slate-400 font-semibold">منصة المسابقات الفكرية والتفاعلية</p>
+                </div>
+            </div>
+
+            <!-- Logged-in Wallet Header Pill -->
+            <div id="nav-user-info" class="hidden flex items-center gap-2 md:gap-3">
+                <div class="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-2xl flex items-center gap-2 shadow-inner">
+                    <i class="fa-solid fa-wallet text-amber-400 text-sm"></i>
+                    <span id="user-balance-display" class="font-black text-emerald-400 text-sm md:text-base">0.00</span>
+                    <span class="text-[11px] font-bold text-slate-400">د.ج</span>
+                </div>
+                <button onclick="logout()" title="تسجيل الخروج" class="bg-slate-900 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-rose-800/50 p-2 rounded-2xl transition duration-200">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Dynamic Content Wrapper -->
+    <main class="max-w-4xl mx-auto p-4 flex-1 w-full flex flex-col justify-center my-4">
+
+        <!-- 1. AUTHENTICATION SCREEN -->
+        <div id="auth-screen" class="w-full max-w-md mx-auto my-auto">
+            <div class="glass-card p-6 md:p-8 rounded-3xl shadow-2xl border border-slate-800/80 relative overflow-hidden">
+                <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-black text-slate-100 tracking-tight">مرحباً بك في المنصة</h2>
+                    <p class="text-xs text-slate-400 mt-1">سجل دخولك أو أنشئ حساباً جديداً للبدء</p>
+                </div>
+
+                <!-- Independent Tab Buttons -->
+                <div class="flex bg-slate-950 p-1.5 rounded-2xl mb-6 border border-slate-800/80">
+                    <button id="tab-login-btn" onclick="switchAuthTab('login')" class="flex-1 py-2.5 rounded-xl font-bold text-xs md:text-sm transition bg-amber-500 text-slate-950 shadow-md">
+                        تسجيل الدخول
+                    </button>
+                    <button id="tab-register-btn" onclick="switchAuthTab('register')" class="flex-1 py-2.5 rounded-xl font-bold text-xs md:text-sm text-slate-400 hover:text-slate-200 transition">
+                        حساب جديد
+                    </button>
+                </div>
+
+                <!-- FORM 1: Login Form (Strict Firebase Existence Validation) -->
+                <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">رقم الهاتف المسجل</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-phone absolute right-3.5 top-3.5 text-slate-500 text-sm"></i>
+                            <input type="tel" id="login-phone" required placeholder="06XXXXXXXX" dir="ltr" class="w-full bg-slate-950/80 border border-slate-800 focus:border-amber-500 rounded-xl pr-10 pl-3 py-3 text-sm text-slate-100 focus:outline-none transition">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">كلمة المرور</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-lock absolute right-3.5 top-3.5 text-slate-500 text-sm"></i>
+                            <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-slate-950/80 border border-slate-800 focus:border-amber-500 rounded-xl pr-10 pl-3 py-3 text-sm text-slate-100 focus:outline-none transition">
+                        </div>
+                    </div>
+                    <button type="submit" id="login-submit-btn" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3.5 rounded-xl btn-neon text-sm mt-2 flex items-center justify-center gap-2">
+                        <span>دخول المنصة</span>
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                </form>
+
+                <!-- FORM 2: Separate New User Registration -->
+                <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">الاسم الكامل</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-user absolute right-3.5 top-3.5 text-slate-500 text-sm"></i>
+                            <input type="text" id="reg-name" required placeholder="مثال: محمد بن علي" class="w-full bg-slate-950/80 border border-slate-800 focus:border-emerald-500 rounded-xl pr-10 pl-3 py-3 text-sm text-slate-100 focus:outline-none transition">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">رقم الهاتف (معرف الحساب)</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-mobile-screen absolute right-3.5 top-3.5 text-slate-500 text-sm"></i>
+                            <input type="tel" id="reg-phone" required placeholder="06XXXXXXXX" dir="ltr" class="w-full bg-slate-950/80 border border-slate-800 focus:border-emerald-500 rounded-xl pr-10 pl-3 py-3 text-sm text-slate-100 focus:outline-none transition">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1.5">كلمة المرور</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-key absolute right-3.5 top-3.5 text-slate-500 text-sm"></i>
+                            <input type="password" id="reg-password" required placeholder="••••••••" class="w-full bg-slate-950/80 border border-slate-800 focus:border-emerald-500 rounded-xl pr-10 pl-3 py-3 text-sm text-slate-100 focus:outline-none transition">
+                        </div>
+                    </div>
+                    <div class="bg-slate-950/60 p-3 rounded-2xl border border-emerald-500/20 text-xs text-emerald-400 flex items-center gap-2.5">
+                        <i class="fa-solid fa-gift text-lg text-emerald-400"></i>
+                        <span>احصل فوراً على <strong>600.00 د.ج</strong> هدية ترحيبية عند إتمام التسجيل!</span>
+                    </div>
+                    <button type="submit" id="reg-submit-btn" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black py-3.5 rounded-xl btn-neon-emerald text-sm mt-2 flex items-center justify-center gap-2">
+                        <span>تأكيد إنشاء الحساب</span>
+                        <i class="fa-solid fa-user-plus"></i>
+                    </button>
+                </form>
+
+            </div>
+        </div>
+
+        <!-- 2. HOME DASHBOARD -->
+        <div id="home-screen" class="hidden space-y-6 my-auto">
+            
+            <!-- Financial Status & Quick Actions Banner -->
+            <div class="glass-card p-6 rounded-3xl border border-slate-800/80 relative overflow-hidden neon-glow-amber">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <h2 class="text-xl md:text-2xl font-black text-amber-400">شروط وقواعد التحدي المالية</h2>
+                        </div>
+                        <p class="text-xs md:text-sm text-slate-300 leading-relaxed">
+                            التذكرة: <span class="text-rose-400 font-bold">50.00 د.ج</span> | 
+                            الفوز: <span class="text-emerald-400 font-bold">+100.00 د.ج</span> | 
+                            الخسارة: <span class="text-rose-500 font-bold">-100.00 د.ج</span>
+                        </p>
+                    </div>
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <button onclick="showDepositModal()" class="flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-4 py-3 rounded-2xl transition shadow-lg shadow-emerald-500/20 text-xs md:text-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus-circle"></i> شحن بريدي موب
+                        </button>
+                        <button onclick="showWithdrawModal()" class="flex-1 md:flex-none bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-4 py-3 rounded-2xl transition shadow-lg shadow-amber-500/20 text-xs md:text-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-money-bill-transfer"></i> سحب الأرباح
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Games Grid (5 Games) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                
+                <!-- Game 1: Code Breaker -->
+                <div class="glass-card p-5 rounded-3xl border border-slate-800 hover:border-amber-500/50 transition duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="w-12 h-12 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition">
+                                <i class="fa-solid fa-key"></i>
+                            </div>
+                            <span class="text-[11px] font-bold bg-slate-900 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full">30 ثانية</span>
+                        </div>
+                        <h3 class="font-extrabold text-base text-slate-100">1. تفكيك الشفرة</h3>
+                        <p class="text-xs text-slate-400 mt-1 leading-relaxed">استنتج الرقم السري المكون من 3 أرقام اعتماداً على القرائن الحسابية في 30 ثانية.</p>
+                    </div>
+                    <button onclick="startGame('codebreaker')" class="w-full mt-4 bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-amber-400 font-black py-3 rounded-2xl border border-amber-500/30 transition text-xs flex items-center justify-center gap-2">
+                        <span>بدء الجولة</span>
+                        <span class="text-[10px] opacity-80">(خصم 50 د.ج)</span>
+                    </button>
+                </div>
+
+                <!-- Game 2: Speed Math -->
+                <div class="glass-card p-5 rounded-3xl border border-slate-800 hover:border-blue-500/50 transition duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="w-12 h-12 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition">
+                                <i class="fa-solid fa-calculator"></i>
+                            </div>
+                            <span class="text-[11px] font-bold bg-slate-900 text-blue-400 border border-blue-500/30 px-3 py-1 rounded-full">30 ثانية</span>
+                        </div>
+                        <h3 class="font-extrabold text-base text-slate-100">2. الرياضيات المعقدة</h3>
+                        <p class="text-xs text-slate-400 mt-1 leading-relaxed">احسب الناتج الصحيح لمعادلات مركبة بها أقواس وعمليات متعددة وبثوانٍ معدودة.</p>
+                    </div>
+                    <button onclick="startGame('math')" class="w-full mt-4 bg-slate-900 hover:bg-blue-500 hover:text-slate-950 text-blue-400 font-black py-3 rounded-2xl border border-blue-500/30 transition text-xs flex items-center justify-center gap-2">
+                        <span>بدء الجولة</span>
+                        <span class="text-[10px] opacity-80">(خصم 50 د.ج)</span>
+                    </button>
+                </div>
+
+                <!-- Game 3: Memory Grid -->
+                <div class="glass-card p-5 rounded-3xl border border-slate-800 hover:border-purple-500/50 transition duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="w-12 h-12 bg-purple-500/10 text-purple-400 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition">
+                                <i class="fa-solid fa-grip-vertical"></i>
+                            </div>
+                            <span class="text-[11px] font-bold bg-slate-900 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-full">30 ثانية</span>
+                        </div>
+                        <h3 class="font-extrabold text-base text-slate-100">3. الذاكرة البصرية</h3>
+                        <p class="text-xs text-slate-400 mt-1 leading-relaxed">طابق جميع البطاقات الـ 16 المخفية واستعرض ذاكرتك قبل انقضاء الـ 30 ثانية.</p>
+                    </div>
+                    <button onclick="startGame('memory')" class="w-full mt-4 bg-slate-900 hover:bg-purple-500 hover:text-slate-950 text-purple-400 font-black py-3 rounded-2xl border border-purple-500/30 transition text-xs flex items-center justify-center gap-2">
+                        <span>بدء الجولة</span>
+                        <span class="text-[10px] opacity-80">(خصم 50 د.ج)</span>
+                    </button>
+                </div>
+
+                <!-- Game 4: Simon Color Pattern -->
+                <div class="glass-card p-5 rounded-3xl border border-slate-800 hover:border-teal-500/50 transition duration-300 flex flex-col justify-between group">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="w-12 h-12 bg-teal-500/10 text-teal-400 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition">
+                                <i class="fa-solid fa-palette"></i>
+                            </div>
+                            <span class="text-[11px] font-bold bg-slate-900 text-teal-400 border border-teal-500/30 px-3 py-1 rounded-full">30 ثانية</span>
+                        </div>
+                        <h3 class="font-extrabold text-base text-slate-100">4. تذكر الألوان</h3>
+                        <p class="text-xs text-slate-400 mt-1 leading-relaxed">احفظ التسلسل الملون المضيء وقم بإعادة إدخاله بنفس الترتيب بدقة متناهية.</p>
+                    </div>
+                    <button onclick="startGame('simon')" class="w-full mt-4 bg-slate-900 hover:bg-teal-500 hover:text-slate-950 text-teal-400 font-black py-3 rounded-2xl border border-teal-500/30 transition text-xs flex items-center justify-center gap-2">
+                        <span>بدء الجولة</span>
+                        <span class="text-[10px] opacity-80">(خصم 50 د.ج)</span>
+                    </button>
+                </div>
+
+                <!-- Game 5: Snake with Obstacles (Ultra Snake) -->
+                <div class="glass-card p-5 rounded-3xl border border-slate-800 hover:border-emerald-500/50 transition duration-300 flex flex-col justify-between group md:col-span-2 lg:col-span-1">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center text-xl group-hover:scale-110 transition">
+                                <i class="fa-solid fa-staff-snake"></i>
+                            </div>
+                            <span class="text-[11px] font-bold bg-slate-900 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full">30 ثانية</span>
+                        </div>
+                        <h3 class="font-extrabold text-base text-slate-100">5. ثعبان العقبات (Ultra Snake)</h3>
+                        <p class="text-xs text-slate-400 mt-1 leading-relaxed">اجمع 5 تفاحات على الأقل وتفادَ الجدران والعقبات الحمراء الضارة خلال 30 ثانية!</p>
+                    </div>
+                    <button onclick="startGame('snake')" class="w-full mt-4 bg-slate-900 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 font-black py-3 rounded-2xl border border-emerald-500/30 transition text-xs flex items-center justify-center gap-2">
+                        <span>بدء الجولة</span>
+                        <span class="text-[10px] opacity-80">(خصم 50 د.ج)</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 3. GAMEPLAY ARENA SCREEN -->
+        <div id="gameplay-screen" class="hidden my-auto w-full">
+            <div class="glass-card p-6 md:p-8 rounded-3xl border border-slate-800/80 max-w-lg mx-auto relative">
+                
+                <!-- Game Header Bar -->
+                <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <button onclick="cancelGame()" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-400 px-3 py-1.5 rounded-xl border border-slate-800">
+                            <i class="fa-solid fa-arrow-right ml-1"></i> انسحاب
+                        </button>
+                        <h3 id="active-game-title" class="font-extrabold text-amber-400 text-base md:text-lg">اسم اللعبة</h3>
+                    </div>
+                    <div class="flex items-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 px-3 py-1.5 rounded-xl">
+                        <i class="fa-solid fa-clock text-sm"></i>
+                        <span id="game-timer" class="font-black text-xl">30</span>
+                        <span class="text-[10px] font-bold">ثانية</span>
+                    </div>
+                </div>
+
+                <!-- Dynamic Game Content Box -->
+                <div id="game-container" class="min-h-[280px] flex flex-col items-center justify-center">
+                    <!-- Dynamic standard inputs and canvas load here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. ADVANCED ADMIN DASHBOARD SCREEN -->
+        <div id="admin-screen" class="hidden space-y-6 my-auto">
+            <div class="glass-card p-6 md:p-8 rounded-3xl border border-slate-800">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-user-shield"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black text-amber-400">لوحة تحكم الأدمن والمدير العام</h2>
+                            <p class="text-xs text-slate-400">تتبع المشاركات، معاينة صور الإيصالات والموافقة على الشحن</p>
+                        </div>
+                    </div>
+                    <button onclick="logout()" class="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/50 px-4 py-2 rounded-xl text-xs font-bold transition">
+                        تسجيل الخروج
+                    </button>
+                </div>
+
+                <!-- Edit BaridiMob Settings Form -->
+                <div class="bg-slate-950/60 p-5 rounded-2xl border border-slate-800/80 space-y-4 mb-6">
+                    <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-pen-to-square text-amber-400"></i>
+                        تحديث بيانات RIP و CCP للأدمن:
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">رقم الحساب RIP</label>
+                            <input type="text" id="admin-rip-input" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-100 font-mono focus:border-amber-500 focus:outline-none" placeholder="00799999000000000000">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">اسم صاحب الحساب الكامل</label>
+                            <input type="text" id="admin-name-input" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-100 focus:border-amber-500 focus:outline-none" placeholder="الاسم واللقب">
+                        </div>
+                    </div>
+                    <button onclick="saveAdminSettings()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-6 py-2.5 rounded-xl text-xs transition">
+                        حفظ البيانات الجديدة
+                    </button>
+                </div>
+
+                <!-- Tabbed Tracking Views for Admin -->
+                <div class="space-y-6">
+                    <!-- Deposit Approvals with Phone Gallery Receipts -->
+                    <div>
+                        <h3 class="font-bold text-slate-200 text-sm mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-receipt text-emerald-400"></i>
+                            طلبات الشحن المعلقة صور الإيصالات المرفقة:
+                        </h3>
+                        <div id="admin-deposits-list" class="space-y-3">
+                            <p class="text-slate-500 text-xs text-center py-6">جاري جلب الطلبات مباشرة من قاعدة البيانات...</p>
+                        </div>
+                    </div>
+
+                    <!-- Registered Users & Games Played Tracking Table -->
+                    <div>
+                        <h3 class="font-bold text-slate-200 text-sm mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-users-viewfinder text-blue-400"></i>
+                            سجل جميع المشتركين الذين شاركوا وأرصدتهم:
+                        </h3>
+                        <div class="overflow-x-auto bg-slate-950/60 rounded-2xl border border-slate-800/80">
+                            <table class="w-full text-xs text-right text-slate-300">
+                                <thead class="bg-slate-900 text-slate-400 font-bold border-b border-slate-800">
+                                    <tr>
+                                        <th class="p-3">الاسم الكامل</th>
+                                        <th class="p-3">رقم الهاتف</th>
+                                        <th class="p-3">الرصيد الحالي</th>
+                                        <th class="p-3">عدد الجولات الملعيوبة</th>
+                                        <th class="p-3">حالة السحب</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-users-table-body">
+                                    <tr>
+                                        <td colspan="5" class="p-4 text-center text-slate-500">جاري تحميل بيانات المشتركين...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL: DEPOSIT WITH PHOTO ATTACHMENT -->
+    <div id="deposit-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card p-6 rounded-3xl border border-slate-800 w-full max-w-md relative">
+            <button onclick="closeModal('deposit-modal')" class="absolute top-4 left-4 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <h3 class="text-lg font-black text-emerald-400 mb-1">شحن الرصيد عبر BaridiMob</h3>
+            <p class="text-xs text-slate-400 mb-4">قم بإرسال المبلغ وارفق صورة إيصال الدفع من معرض هاتفك للتأكيد</p>
+            
+            <div class="bg-slate-950/80 p-4 rounded-2xl border border-slate-800 space-y-2 mb-4 text-xs">
+                <p class="text-slate-400">بيانات الحساب للتحويل:</p>
+                <div class="flex justify-between items-center bg-slate-900 p-3 rounded-xl font-mono text-amber-400 border border-slate-800">
+                    <span id="display-rip" class="text-xs">00799999000000000000</span>
+                    <button onclick="copyRIP()" class="text-slate-400 hover:text-amber-400 text-sm"><i class="fa-solid fa-copy"></i></button>
+                </div>
+                <p class="text-slate-400">صاحب الحساب: <strong id="display-ccp-name" class="text-slate-200">المدير المشرف</strong></p>
+                <p class="text-rose-400 font-bold">* الحد الأدنى للشحن: 200.00 د.ج</p>
+            </div>
+
+            <form onsubmit="submitDeposit(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">المبلغ المراد شحنه (د.ج)</label>
+                    <input type="number" id="deposit-amount" min="200" required placeholder="مثال: 500" class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl p-3 text-xs text-slate-100 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">الرقم المرجعي للتحويل (اختياري)</label>
+                    <input type="text" id="deposit-ref" placeholder="رقم المعاملة من بريدي موب" class="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl p-3 text-xs text-slate-100 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">صورة وصل/إيصال الدفع من المعرض <span class="text-rose-400">*</span></label>
+                    <input type="file" id="deposit-receipt-file" accept="image/*" required onchange="previewDepositImage(event)" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-amber-400 hover:file:bg-slate-700 cursor-pointer">
+                    <div id="receipt-preview-container" class="mt-2 hidden text-center">
+                        <img id="receipt-preview-img" class="max-h-32 mx-auto rounded-xl border border-slate-800 shadow-md object-cover">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-3 rounded-xl text-xs transition mt-2">
+                    تأكيد وإرسال طلب الشحن
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: RECEIPT FULL IMAGE ZOOM FOR ADMIN -->
+    <div id="image-zoom-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="relative max-w-2xl w-full">
+            <button onclick="closeModal('image-zoom-modal')" class="absolute -top-10 left-0 text-slate-300 hover:text-white text-2xl font-bold">
+                <i class="fa-solid fa-xmark"></i> إغلاق المعاينة
+            </button>
+            <img id="zoomed-receipt-img" class="w-full max-h-[80vh] object-contain rounded-2xl border border-slate-800 shadow-2xl">
+        </div>
+    </div>
+
+    <!-- MODAL: WITHDRAW -->
+    <div id="withdraw-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card p-6 rounded-3xl border border-slate-800 w-full max-w-md relative">
+            <button onclick="closeModal('withdraw-modal')" class="absolute top-4 left-4 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <h3 class="text-lg font-black text-amber-400 mb-1">سحب الأرباح</h3>
+            <div class="bg-amber-500/10 border border-amber-500/20 p-3 rounded-2xl mb-4 text-xs text-amber-300">
+                <p>• الحد الأدنى للسحب: <strong>30,000.00 د.ج</strong></p>
+                <p>• يُسمح بعملية سحب <strong>واحدة فقط لكل حساب</strong> لمنع التلاعب.</p>
+            </div>
+
+            <form onsubmit="submitWithdraw(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">رقم الحساب RIP الخاص بك</label>
+                    <input type="text" id="withdraw-rip" required placeholder="007..." class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl p-3 text-xs text-slate-100 font-mono focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">المبلغ المراد سحبه (د.ج)</label>
+                    <input type="number" id="withdraw-amount" min="30000" required placeholder="30000" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl p-3 text-xs text-slate-100 focus:outline-none">
+                </div>
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3 rounded-xl text-xs transition mt-2">
+                    تأكيد إرسال طلب السحب
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- CUSTOM MESSAGE BOX MODAL (No alert()) -->
+    <div id="msg-box-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-card p-6 rounded-3xl border border-slate-800 w-full max-w-sm text-center">
+            <div id="msg-box-icon" class="text-3xl mb-3 text-amber-400">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <h4 id="msg-box-title" class="font-bold text-slate-100 text-base mb-2">إشعار</h4>
+            <p id="msg-box-body" class="text-xs text-slate-300 mb-5 leading-relaxed">المحتوى...</p>
+            <button onclick="closeModal('msg-box-modal')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 rounded-xl text-xs transition">
+                موافق
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 border-t border-slate-800/60 py-4 text-center text-[11px] text-slate-500 font-semibold">
+        منصة ألعاب التحدي والذكاء الجزائرية © 2026 - نظام مالي وأمني متكامل
+    </footer>
+
+    <script>
+        // Firebase Configured to exact user Database URL
+        const firebaseConfig = {
+            databaseURL: "https://alger-gam-default-rtdb.firebaseio.com"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentUser = null;
+        let activeTimer = null;
+        let gameTimeLeft = 30;
+        let uploadedBase64Receipt = "";
+        let snakeInterval = null;
+
+        window.onload = function() {
+            loadAdminInfo();
+        };
+
+        function showCustomAlert(title, message, iconClass = "fa-solid fa-circle-info text-amber-400") {
+            document.getElementById('msg-box-title').innerText = title;
+            document.getElementById('msg-box-body').innerText = message;
+            document.getElementById('msg-box-icon').innerHTML = `<i class="${iconClass}"></i>`;
+            document.getElementById('msg-box-modal').classList.remove('hidden');
+        }
+
+        function showScreen(screenId) {
+            ['auth-screen', 'home-screen', 'gameplay-screen', 'admin-screen'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+
+            if (screenId === 'auth-screen') {
+                document.getElementById('nav-user-info').classList.add('hidden');
+            } else {
+                document.getElementById('nav-user-info').classList.remove('hidden');
+            }
+        }
+
+        function navigateToHome() {
+            if (currentUser) {
+                if (currentUser.isAdmin) {
+                    showScreen('admin-screen');
+                } else {
+                    showScreen('home-screen');
+                }
+            } else {
+                showScreen('auth-screen');
+            }
+        }
+
+        function switchAuthTab(tab) {
+            if (tab === 'login') {
+                document.getElementById('login-form').classList.remove('hidden');
+                document.getElementById('register-form').classList.add('hidden');
+                document.getElementById('tab-login-btn').className = "flex-1 py-2.5 rounded-xl font-bold text-xs md:text-sm transition bg-amber-500 text-slate-950 shadow-md";
+                document.getElementById('tab-register-btn').className = "flex-1 py-2.5 rounded-xl font-bold text-xs md:text-sm text-slate-400 hover:text-slate-200 transition";
+            } else {
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('register-form').classList.remove('hidden');
+                document.getElementById('tab-register-btn').className = "flex-1 py-2.5 rounded-xl font-bold text-xs md:text-sm transition bg-emerald-500 text-slate-950 shadow-md";
+                document.getElementById('tab-login-btn').className = "flex-1 py-2.5 rounded-xl font-bold text-xs md:text-sm text-slate-400 hover:text-slate-200 transition";
+            }
+        }
+
+        // STRICT LOGIN CHECK: User MUST exist in Firebase first
+        function handleLogin(e) {
+            e.preventDefault();
+            const phone = document.getElementById('login-phone').value.trim();
+            const pass = document.getElementById('login-password').value.trim();
+
+            // Admin Master Credentials: 0670800009 / 0
+            if (phone === "0670800009" && pass === "0") {
+                currentUser = { phone: "0670800009", name: "المدير المشرف", isAdmin: true, balance: 0 };
+                document.getElementById('user-balance-display').innerText = "المشرف";
+                showScreen('admin-screen');
+                listenToAdminData();
+                return;
+            }
+
+            // Realtime Database check for non-registered numbers
+            db.ref('users/' + phone).once('value').then(snapshot => {
+                if (!snapshot.exists()) {
+                    showCustomAlert('حساب غير موجود', 'عذراً، هذا الرقم غير مسجل بتاتاً في منصتنا! لا يمكنك تسجيل الدخول دون إنشاء حساب جديد أولاً.', 'fa-solid fa-user-slash text-rose-500');
+                    switchAuthTab('register');
+                    return;
+                }
+
+                const userData = snapshot.val();
+                if (userData.password === pass) {
+                    currentUser = userData;
+                    updateBalanceUI();
+                    showScreen('home-screen');
+                    listenToUserChanges();
+                } else {
+                    showCustomAlert('خطأ في الدخول', 'كلمة المرور غير صحيحة!', 'fa-solid fa-key text-rose-500');
+                }
+            });
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value.trim();
+            const phone = document.getElementById('reg-phone').value.trim();
+            const pass = document.getElementById('reg-password').value.trim();
+
+            if (!phone || !pass || !name) return;
+
+            db.ref('users/' + phone).once('value').then(snapshot => {
+                if (snapshot.exists()) {
+                    showCustomAlert('رقم هاتف مسجل', 'عذراً، هذا الرقم مسجل بالفعل على المنصة! يرجى الانتقال إلى قسم تسجيل الدخول.', 'fa-solid fa-shield-halved text-amber-400');
+                    switchAuthTab('login');
+                } else {
+                    const newUser = {
+                        name: name,
+                        phone: phone,
+                        password: pass,
+                        balance: 600.00,
+                        gamesPlayed: 0,
+                        hasWithdrawn: false
+                    };
+                    db.ref('users/' + phone).set(newUser).then(() => {
+                        currentUser = newUser;
+                        updateBalanceUI();
+                        showCustomAlert('أهلاً بك معنا!', 'تم إنشاء حسابك بنجاح! وحصلت على 600.00 د.ج كهدية ترحيبية.', 'fa-solid fa-circle-check text-emerald-400');
+                        showScreen('home-screen');
+                        listenToUserChanges();
+                    });
+                }
+            });
+        }
+
+        function listenToUserChanges() {
+            if (!currentUser || currentUser.isAdmin) return;
+            db.ref('users/' + currentUser.phone).on('value', snapshot => {
+                if (snapshot.exists()) {
+                    currentUser = snapshot.val();
+                    updateBalanceUI();
+                }
+            });
+        }
+
+        function updateBalanceUI() {
+            if (currentUser && !currentUser.isAdmin) {
+                document.getElementById('user-balance-display').innerText = currentUser.balance.toFixed(2);
+            }
+        }
+
+        function logout() {
+            if (currentUser && !currentUser.isAdmin) {
+                db.ref('users/' + currentUser.phone).off();
+            }
+            currentUser = null;
+            clearInterval(activeTimer);
+            clearInterval(snakeInterval);
+            showScreen('auth-screen');
+        }
+
+        function startGame(gameType) {
+            if (!currentUser) return;
+
+            if (currentUser.balance < 50) {
+                showCustomAlert('رصيد غير كافٍ', 'يلزمك 50.00 د.ج على الأقل للالتحاق بهذه الجولة!', 'fa-solid fa-wallet text-rose-500');
+                showDepositModal();
+                return;
+            }
+
+            // Deduct ticket price & increment games played
+            currentUser.balance -= 50;
+            currentUser.gamesPlayed = (currentUser.gamesPlayed || 0) + 1;
+
+            db.ref('users/' + currentUser.phone).update({
+                balance: currentUser.balance,
+                gamesPlayed: currentUser.gamesPlayed
+            });
+
+            showScreen('gameplay-screen');
+            startTimer();
+
+            const container = document.getElementById('game-container');
+            container.innerHTML = '';
+
+            if (gameType === 'codebreaker') {
+                document.getElementById('active-game-title').innerText = "تفكيك الشفرة";
+                initCodeBreakerGame(container);
+            } else if (gameType === 'math') {
+                document.getElementById('active-game-title').innerText = "الرياضيات المعقدة";
+                initMathGame(container);
+            } else if (gameType === 'memory') {
+                document.getElementById('active-game-title').innerText = "الذاكرة البصرية";
+                initMemoryGame(container);
+            } else if (gameType === 'simon') {
+                document.getElementById('active-game-title').innerText = "تذكر الألوان";
+                initSimonGame(container);
+            } else if (gameType === 'snake') {
+                document.getElementById('active-game-title').innerText = "ثعبان العقبات (Ultra Snake)";
+                initSnakeGame(container);
+            }
+        }
+
+        function startTimer() {
+            clearInterval(activeTimer);
+            gameTimeLeft = 30;
+            document.getElementById('game-timer').innerText = gameTimeLeft;
+
+            activeTimer = setInterval(() => {
+                gameTimeLeft--;
+                document.getElementById('game-timer').innerText = gameTimeLeft;
+                if (gameTimeLeft <= 0) {
+                    clearInterval(activeTimer);
+                    clearInterval(snakeInterval);
+                    endGame(false, "انتهى الوقت المسموح به (30 ثانية)!");
+                }
+            }, 1000);
+        }
+
+        function cancelGame() {
+            clearInterval(activeTimer);
+            clearInterval(snakeInterval);
+            showScreen('home-screen');
+        }
+
+        function endGame(isWin, message) {
+            clearInterval(activeTimer);
+            clearInterval(snakeInterval);
+            if (isWin) {
+                currentUser.balance += 100; // Reward +100 DZD
+                db.ref('users/' + currentUser.phone + '/balance').set(currentUser.balance);
+                showCustomAlert('انتصار مستحق! 🎉', `${message}\nتمت إضافة +100.00 د.ج إلى حسابك!`, 'fa-solid fa-trophy text-amber-400');
+            } else {
+                currentUser.balance = Math.max(0, currentUser.balance - 100); // Penalty -100 DZD
+                db.ref('users/' + currentUser.phone + '/balance').set(currentUser.balance);
+                showCustomAlert('للاسف لم توفق! ❌', `${message}\nتم خصم -100.00 د.ج من حسابك.`, 'fa-solid fa-circle-xmark text-rose-500');
+            }
+            showScreen('home-screen');
+        }
+
+        // Game 1: Code Breaker
+        function initCodeBreakerGame(container) {
+            const digit1 = Math.floor(Math.random() * 9) + 1;
+            const digit2 = Math.floor(Math.random() * 10);
+            const digit3 = Math.floor(Math.random() * 10);
+            const secretCode = `${digit1}${digit2}${digit3}`;
+            const sum = digit1 + digit2 + digit3;
+
+            container.innerHTML = `
+                <div class="text-center w-full">
+                    <p class="text-xs text-slate-300 mb-3">استنتج الرقم السري المكون من 3 أرقام اعتماداً على القرائن التالية:</p>
+                    <div class="bg-slate-950/80 p-4 rounded-2xl border border-amber-500/30 text-xs text-amber-300 space-y-2 mb-5 text-right font-semibold">
+                        <p><i class="fa-solid fa-lightbulb text-amber-400 ml-1"></i> الرقم الأول: <strong>${digit1 % 2 === 0 ? 'عدد زوجي' : 'عدد فردي'}</strong></p>
+                        <p><i class="fa-solid fa-calculator text-amber-400 ml-1"></i> مجموع الأرقام الثلاثة يساوي: <strong>${sum}</strong></p>
+                        <p><i class="fa-solid fa-flag text-amber-400 ml-1"></i> الرقم الأخير: <strong>${digit3 > 4 ? 'أكبر من 4' : 'أصغر من أو يساوي 4'}</strong></p>
+                    </div>
+                    <input type="number" id="code-input" placeholder="000" maxlength="3" class="w-36 bg-slate-950 border-2 border-amber-500/80 rounded-2xl text-center text-3xl font-black p-3 mb-5 tracking-widest text-amber-400 focus:outline-none focus:scale-105 transition">
+                    <button onclick="checkCode('${secretCode}')" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-3 rounded-xl text-xs transition">
+                        تأكيد الشفرة السرية
+                    </button>
+                </div>
+            `;
+        }
+
+        function checkCode(secretCode) {
+            const input = document.getElementById('code-input').value.toString();
+            if (input === secretCode) {
+                endGame(true, "ممتاز! قمت بتفكيك الشفرة السرية بنجاح!");
+            } else {
+                endGame(false, "الشفرة الخاطئة! الرقم السري الصحيح كان: " + secretCode);
+            }
+        }
+
+        // Game 2: Speed Math
+        function initMathGame(container) {
+            const a = Math.floor(Math.random() * 12) + 4;
+            const b = Math.floor(Math.random() * 8) + 2;
+            const c = Math.floor(Math.random() * 15) + 5;
+            const ans = (a + b) * 2 - c;
+
+            container.innerHTML = `
+                <div class="text-center w-full">
+                    <p class="text-xs text-slate-300 mb-3">احسب الناتج الرياضي الدقيق للمعادلة المركبة التالي:</p>
+                    <div class="text-2xl font-black text-blue-400 bg-slate-950/80 px-6 py-5 rounded-2xl border border-blue-500/30 mb-5 tracking-wider font-mono">
+                        (${a} + ${b}) × 2 - ${c} = ?
+                    </div>
+                    <input type="number" id="math-ans" placeholder="الناتج" class="w-36 bg-slate-950 border-2 border-blue-500/80 rounded-2xl text-center text-2xl font-black p-3 mb-5 text-blue-400 focus:outline-none focus:scale-105 transition">
+                    <button onclick="checkMath(${ans})" class="w-full bg-blue-500 hover:bg-blue-400 text-slate-950 font-black py-3 rounded-xl text-xs transition">
+                        إرسال الإجابة
+                    </button>
+                </div>
+            `;
+        }
+
+        function checkMath(correctAns) {
+            const val = parseInt(document.getElementById('math-ans').value);
+            if (val === correctAns) {
+                endGame(true, "إجابة رياضية دقيقة وسريعة!");
+            } else {
+                endGame(false, "إجابة خاطئة! الناتج الصحيح هو: " + correctAns);
+            }
+        }
+
+        // Game 3: Memory Grid
+        function initMemoryGame(container) {
+            const icons = ['🔥', '⚡', '💎', '🚀', '👑', '🎯', '🎰', '🏆'];
+            let deck = [...icons, ...icons].sort(() => Math.random() - 0.5);
+            let flipped = [];
+            let matchedCount = 0;
+
+            container.innerHTML = `
+                <div class="w-full text-center">
+                    <p class="text-xs text-slate-300 mb-3">طابق جميع البطاقات الـ 16 بسرعة:</p>
+                    <div id="memory-grid" class="grid grid-cols-4 gap-2.5 w-full max-w-xs mx-auto"></div>
+                </div>
+            `;
+
+            const grid = document.getElementById('memory-grid');
+            deck.forEach((icon) => {
+                const btn = document.createElement('button');
+                btn.className = "h-14 bg-slate-950 border border-slate-800 rounded-2xl text-xl flex items-center justify-center transition duration-200 active:scale-95";
+                btn.innerText = '❓';
+                btn.onclick = () => {
+                    if (flipped.length < 2 && !btn.disabled && !flipped.some(item => item.btn === btn)) {
+                        btn.innerText = icon;
+                        btn.classList.add('bg-purple-950/80', 'border-purple-500');
+                        flipped.push({ btn, icon });
+
+                        if (flipped.length === 2) {
+                            if (flipped[0].icon === flipped[1].icon) {
+                                flipped[0].btn.disabled = true;
+                                flipped[1].btn.disabled = true;
+                                flipped[0].btn.classList.add('opacity-40');
+                                flipped[1].btn.classList.add('opacity-40');
+                                flipped = [];
+                                matchedCount += 2;
+                                if (matchedCount === 16) {
+                                    endGame(true, "أتممت المطابقة الكاملة لجميع الأوراق ببراعة!");
+                                }
+                            } else {
+                                setTimeout(() => {
+                                    if (flipped[0] && flipped[1]) {
+                                        flipped[0].btn.innerText = '❓';
+                                        flipped[1].btn.innerText = '❓';
+                                        flipped[0].btn.classList.remove('bg-purple-950/80', 'border-purple-500');
+                                        flipped[1].btn.classList.remove('bg-purple-950/80', 'border-purple-500');
+                                        flipped = [];
+                                    }
+                                }, 400);
+                            }
+                        }
+                    }
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        // Game 4: Simon Color Pattern
+        function initSimonGame(container) {
+            const colors = ['red', 'blue', 'green', 'yellow'];
+            let pattern = [];
+            for (let i = 0; i < 5; i++) {
+                pattern.push(colors[Math.floor(Math.random() * 4)]);
+            }
+
+            container.innerHTML = `
+                <div class="text-center w-full flex flex-col items-center">
+                    <p id="simon-status" class="text-xs font-bold text-amber-400 mb-4 animate-pulse">شاهد التسلسل المضيء بحذر...</p>
+                    <div class="grid grid-cols-2 gap-3 w-52 h-52 mb-2">
+                        <button id="btn-red" disabled class="bg-rose-600 rounded-2xl opacity-30 transition duration-150"></button>
+                        <button id="btn-blue" disabled class="bg-blue-600 rounded-2xl opacity-30 transition duration-150"></button>
+                        <button id="btn-green" disabled class="bg-emerald-600 rounded-2xl opacity-30 transition duration-150"></button>
+                        <button id="btn-yellow" disabled class="bg-amber-500 rounded-2xl opacity-30 transition duration-150"></button>
+                    </div>
+                </div>
+            `;
+
+            let step = 0;
+            const interval = setInterval(() => {
+                if (step < pattern.length) {
+                    const col = pattern[step];
+                    const b = document.getElementById('btn-' + col);
+                    if (b) {
+                        b.classList.remove('opacity-30');
+                        b.classList.add('scale-105', 'shadow-lg');
+                        setTimeout(() => {
+                            b.classList.add('opacity-30');
+                            b.classList.remove('scale-105', 'shadow-lg');
+                        }, 400);
+                    }
+                    step++;
+                } else {
+                    clearInterval(interval);
+                    document.getElementById('simon-status').innerText = "الان دورك! أعد الترتيب بالضغط على الألوان";
+                    document.getElementById('simon-status').classList.remove('animate-pulse');
+                    document.getElementById('simon-status').classList.add('text-emerald-400');
+                    enableSimonInput(pattern);
+                }
+            }, 750);
+        }
+
+        function enableSimonInput(pattern) {
+            let userStep = 0;
+            ['red', 'blue', 'green', 'yellow'].forEach(col => {
+                const b = document.getElementById('btn-' + col);
+                if (b) {
+                    b.disabled = false;
+                    b.onclick = () => {
+                        b.classList.remove('opacity-30');
+                        setTimeout(() => b.classList.add('opacity-30'), 200);
+
+                        if (col === pattern[userStep]) {
+                            userStep++;
+                            if (userStep === pattern.length) {
+                                endGame(true, "تذكرت كافة تسلسلات الألوان بالترتيب الصحيح!");
+                            }
+                        } else {
+                            endGame(false, "خطأ في ترتيب الألوان المضيئة!");
+                        }
+                    };
+                }
+            });
+        }
+
+        // Game 5: Snake with Obstacles (Ultra Snake Engine)
+        function initSnakeGame(container) {
+            container.innerHTML = `
+                <div class="flex flex-col items-center w-full">
+                    <p class="text-xs text-slate-300 mb-2">اجمع <span class="text-emerald-400 font-bold">5 تفاحات</span> وتفادَ العقبات الحمراء والجدران!</p>
+                    <div class="flex justify-between w-full max-w-[280px] text-xs font-bold mb-2">
+                        <span class="text-emerald-400">التفاحات: <span id="snake-score">0</span> / 5</span>
+                    </div>
+                    <canvas id="snake-canvas" width="280" height="280" class="bg-slate-950 border-2 border-emerald-500/40 rounded-2xl shadow-inner mb-3"></canvas>
+                    
+                    <!-- Touch Controls for Mobile Devices -->
+                    <div class="grid grid-cols-3 gap-2 w-44 text-center text-sm">
+                        <div></div>
+                        <button onclick="setSnakeDir(0, -1)" class="bg-slate-900 border border-slate-800 text-slate-200 p-2.5 rounded-xl"><i class="fa-solid fa-arrow-up"></i></button>
+                        <div></div>
+                        <button onclick="setSnakeDir(-1, 0)" class="bg-slate-900 border border-slate-800 text-slate-200 p-2.5 rounded-xl"><i class="fa-solid fa-arrow-right"></i></button>
+                        <button onclick="setSnakeDir(0, 1)" class="bg-slate-900 border border-slate-800 text-slate-200 p-2.5 rounded-xl"><i class="fa-solid fa-arrow-down"></i></button>
+                        <button onclick="setSnakeDir(1, 0)" class="bg-slate-900 border border-slate-800 text-slate-200 p-2.5 rounded-xl"><i class="fa-solid fa-arrow-left"></i></button>
+                    </div>
+                </div>
+            `;
+
+            const canvas = document.getElementById('snake-canvas');
+            const ctx = canvas.getContext('2d');
+            const gridSize = 14; // 20x20 grid
+            const tileCount = 20;
+
+            let snake = [{x: 10, y: 10}, {x: 10, y: 11}];
+            let dir = {x: 0, y: -1};
+            let food = {x: 5, y: 5};
+            let score = 0;
+
+            // Generate 4 static obstacles
+            const obstacles = [
+                {x: 4, y: 12}, {x: 5, y: 12},
+                {x: 14, y: 7}, {x: 15, y: 7}
+            ];
+
+            window.setSnakeDir = (dx, dy) => {
+                if (dir.x !== -dx && dir.y !== -dy) {
+                    dir = {x: dx, y: dy};
+                }
+            };
+
+            const handleKey = (e) => {
+                if (e.key === "ArrowUp") setSnakeDir(0, -1);
+                else if (e.key === "ArrowDown") setSnakeDir(0, 1);
+                else if (e.key === "ArrowLeft") setSnakeDir(-1, 0);
+                else if (e.key === "ArrowRight") setSnakeDir(1, 0);
+            };
+
+            document.addEventListener('keydown', handleKey);
+
+            snakeInterval = setInterval(() => {
+                const head = {x: snake[0].x + dir.x, y: snake[headY = 0].y + dir.y};
+                head.x = snake[0].x + dir.x;
+                head.y = snake[0].y + dir.y;
+
+                // Wall collision check
+                if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                    document.removeEventListener('keydown', handleKey);
+                    endGame(false, "اصطدم الثعبان بالجدار الخارجي!");
+                    return;
+                }
+
+                // Obstacle collision check
+                if (obstacles.some(obs => obs.x === head.x && obs.y === head.y)) {
+                    document.removeEventListener('keydown', handleKey);
+                    endGame(false, "اصطدم الثعبان بالعقبات الحمراء الضارة!");
+                    return;
+                }
+
+                // Self collision check
+                if (snake.some(seg => seg.x === head.x && seg.y === head.y)) {
+                    document.removeEventListener('keydown', handleKey);
+                    endGame(false, "اصطدم الثعبان بجسمه!");
+                    return;
+                }
+
+                snake.unshift(head);
+
+                // Food eating check
+                if (head.x === food.x && head.y === food.y) {
+                    score++;
+                    document.getElementById('snake-score').innerText = score;
+                    if (score >= 5) {
+                        document.removeEventListener('keydown', handleKey);
+                        endGame(true, "ممتاز! جمعت 5 تفاحات وتجاوزت العقبات بنجاح!");
+                        return;
+                    }
+                    food = {
+                        x: Math.floor(Math.random() * tileCount),
+                        y: Math.floor(Math.random() * tileCount)
+                    };
+                } else {
+                    snake.pop();
+                }
+
+                // Draw Snake Canvas
+                ctx.fillStyle = "#030712";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw Obstacles
+                ctx.fillStyle = "#ef4444";
+                obstacles.forEach(obs => {
+                    ctx.fillRect(obs.x * gridSize + 1, obs.y * gridSize + 1, gridSize - 2, gridSize - 2);
+                });
+
+                // Draw Food
+                ctx.fillStyle = "#10b981";
+                ctx.beginPath();
+                ctx.arc(food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2, gridSize/2 - 1, 0, Math.PI*2);
+                ctx.fill();
+
+                // Draw Snake
+                snake.forEach((seg, i) => {
+                    ctx.fillStyle = i === 0 ? "#f59e0b" : "#d97706";
+                    ctx.fillRect(seg.x * gridSize + 1, seg.y * gridSize + 1, gridSize - 2, gridSize - 2);
+                });
+
+            }, 120);
+        }
+
+        function showDepositModal() {
+            document.getElementById('deposit-modal').classList.remove('hidden');
+        }
+
+        function showWithdrawModal() {
+            document.getElementById('withdraw-modal').classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // Convert Uploaded Phone Gallery Image to Base64 String
+        function previewDepositImage(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    uploadedBase64Receipt = evt.target.result;
+                    document.getElementById('receipt-preview-img').src = uploadedBase64Receipt;
+                    document.getElementById('receipt-preview-container').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function submitDeposit(e) {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('deposit-amount').value);
+            const ref = document.getElementById('deposit-ref').value.trim() || "غير مدخل";
+
+            if (amount < 200) {
+                showCustomAlert('تنبيه', 'الحد الأدنى لشحن بريدي موب هو 200.00 د.ج', 'fa-solid fa-triangle-exclamation text-amber-400');
+                return;
+            }
+
+            if (!uploadedBase64Receipt) {
+                showCustomAlert('إيصال الدفع مطلوب', 'يرجى إرفاق صورة إيصال الدفع من معرض هاتفك أولاً!', 'fa-solid fa-image text-rose-500');
+                return;
+            }
+
+            const depData = {
+                userPhone: currentUser.phone,
+                userName: currentUser.name,
+                amount: amount,
+                ref: ref,
+                receiptImage: uploadedBase64Receipt,
+                status: 'pending',
+                timestamp: Date.now()
+            };
+
+            db.ref('deposits').push(depData).then(() => {
+                showCustomAlert('تم الطلب بنجاح', 'تم إرسال تفاصيل وصورة إيصال الشحن بنجاح! سيتم التحقق وتفعيل الرصيد من الأدمن قريباً.', 'fa-solid fa-circle-check text-emerald-400');
+                uploadedBase64Receipt = "";
+                document.getElementById('receipt-preview-container').classList.add('hidden');
+                closeModal('deposit-modal');
+            });
+        }
+
+        function submitWithdraw(e) {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('withdraw-amount').value);
+
+            if (currentUser.hasWithdrawn) {
+                showCustomAlert('ممنوع التكرار', 'عذراً، لقد قمت بطلب سحب أرباحك مسبقاً! يُسمح بسحب واحد فقط لكل حساب.', 'fa-solid fa-ban text-rose-500');
+                return;
+            }
+
+            if (amount < 30000 || currentUser.balance < amount) {
+                showCustomAlert('رصيد غير كافٍ', 'الحد الأدنى للسحب هو 30,000.00 د.ج ويجب توفره في حسابك.', 'fa-solid fa-circle-exclamation text-rose-500');
+                return;
+            }
+
+            currentUser.balance -= amount;
+            currentUser.hasWithdrawn = true;
+
+            db.ref('users/' + currentUser.phone).update({
+                balance: currentUser.balance,
+                hasWithdrawn: true
+            }).then(() => {
+                showCustomAlert('تم السحب بنجاح', 'تم خصم المبلغ وتجهيز السحب للإرسال لحساب الـ RIP الخاص بك!', 'fa-solid fa-circle-check text-emerald-400');
+                closeModal('withdraw-modal');
+            });
+        }
+
+        function loadAdminInfo() {
+            db.ref('admin_info').once('value').then(snapshot => {
+                if (snapshot.exists()) {
+                    const info = snapshot.val();
+                    document.getElementById('display-rip').innerText = info.rip || "00799999000000000000";
+                    document.getElementById('display-ccp-name').innerText = info.name || "المدير المشرف";
+                    document.getElementById('admin-rip-input').value = info.rip || "";
+                    document.getElementById('admin-name-input').value = info.name || "";
+                }
+            });
+        }
+
+        function saveAdminSettings() {
+            const rip = document.getElementById('admin-rip-input').value.trim();
+            const name = document.getElementById('admin-name-input').value.trim();
+
+            db.ref('admin_info').set({ rip, name }).then(() => {
+                showCustomAlert('تم التحديث', 'تم حفظ وتدقيق بيانات بريدي موب بنجاح!', 'fa-solid fa-circle-check text-emerald-400');
+                loadAdminInfo();
+            });
+        }
+
+        function listenToAdminData() {
+            // Listen to Pending Deposits with Images
+            db.ref('deposits').on('value', snapshot => {
+                const list = document.getElementById('admin-deposits-list');
+                list.innerHTML = '';
+
+                if (!snapshot.exists()) {
+                    list.innerHTML = '<p class="text-slate-500 text-xs text-center py-6">لا توجد طلبات شحن معلقة حالياً.</p>';
+                    return;
+                }
+
+                let pendingFound = false;
+
+                snapshot.forEach(child => {
+                    const key = child.key;
+                    const dep = child.val();
+
+                    if (dep.status === 'pending') {
+                        pendingFound = true;
+                        const item = document.createElement('div');
+                        item.className = "bg-slate-950 border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4";
+                        item.innerHTML = `
+                            <div class="flex items-center gap-3">
+                                ${dep.receiptImage ? `<img src="${dep.receiptImage}" onclick="zoomImage('${dep.receiptImage}')" class="w-16 h-16 object-cover rounded-xl border border-slate-700 cursor-pointer hover:scale-105 transition" title="انقر للتكبير">` : '<div class="w-16 h-16 bg-slate-900 rounded-xl flex items-center justify-center text-slate-600 text-xs">لا صورة</div>'}
+                                <div>
+                                    <p class="font-bold text-slate-100 text-xs">${dep.userName} (${dep.userPhone})</p>
+                                    <p class="text-[11px] text-emerald-400 font-bold mt-0.5">المبلغ: ${dep.amount} د.ج | مرجع: ${dep.ref}</p>
+                                    <span class="text-[10px] text-slate-500">${new Date(dep.timestamp).toLocaleString('ar-DZ')}</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 w-full md:w-auto">
+                                <button onclick="approveDeposit('${key}', '${dep.userPhone}', ${dep.amount})" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-4 py-2 rounded-xl text-xs flex-1">موافقة والشحن</button>
+                                <button onclick="rejectDeposit('${key}')" class="bg-rose-950 text-rose-300 hover:bg-rose-900 font-bold px-4 py-2 rounded-xl text-xs flex-1 border border-rose-800/40">رفض</button>
+                            </div>
+                        `;
+                        list.appendChild(item);
+                    }
+                });
+
+                if (!pendingFound) {
+                    list.innerHTML = '<p class="text-slate-500 text-xs text-center py-6">تم الفصل في جميع طلبات الشحن المعلقة.</p>';
+                }
+            });
+
+            // Listen to All Registered Users & Track Games Played
+            db.ref('users').on('value', snapshot => {
+                const tbody = document.getElementById('admin-users-table-body');
+                tbody.innerHTML = '';
+
+                if (!snapshot.exists()) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-500">لا يوجد مشتركين حتى الآن.</td></tr>';
+                    return;
+                }
+
+                snapshot.forEach(child => {
+                    const u = child.val();
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b border-slate-800/60 hover:bg-slate-900/50";
+                    tr.innerHTML = `
+                        <td class="p-3 font-semibold text-slate-200">${u.name}</td>
+                        <td class="p-3 font-mono text-slate-400" dir="ltr">${u.phone}</td>
+                        <td class="p-3 font-bold text-emerald-400">${(u.balance || 0).toFixed(2)} د.ج</td>
+                        <td class="p-3 font-bold text-amber-400">${u.gamesPlayed || 0} جولة</td>
+                        <td class="p-3">${u.hasWithdrawn ? '<span class="text-rose-400 font-bold">تم السحب</span>' : '<span class="text-slate-500">لم يسحب</span>'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        function zoomImage(imgUrl) {
+            document.getElementById('zoomed-receipt-img').src = imgUrl;
+            document.getElementById('image-zoom-modal').classList.remove('hidden');
+        }
+
+        function approveDeposit(key, phone, amount) {
+            db.ref('users/' + phone + '/balance').once('value').then(snap => {
+                const currentBal = snap.val() || 0;
+                db.ref('users/' + phone).update({ balance: currentBal + amount });
+                db.ref('deposits/' + key).update({ status: 'approved' });
+                showCustomAlert('تم القبول', `تم إضافة +${amount} د.ج بنجاح إلى حساب المشترك.`, 'fa-solid fa-circle-check text-emerald-400');
+            });
+        }
+
+        function rejectDeposit(key) {
+            db.ref('deposits/' + key).update({ status: 'rejected' });
+        }
+
+        function copyRIP() {
+            const rip = document.getElementById('display-rip').innerText;
+            const tempInput = document.createElement("input");
+            tempInput.value = rip;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            showCustomAlert('تم النسخ', 'تم نسخ رقم الـ RIP بنجاح لحافظتك!', 'fa-solid fa-copy text-amber-400');
+        }
+    </script>
+</body>
+</html>
